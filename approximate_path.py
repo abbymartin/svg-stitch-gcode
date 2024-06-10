@@ -7,12 +7,12 @@ paths, attributes = svg2paths('test.svg')
 p = paths[0]
 points = []
 
-#TODO fill in shape!
 
 def calc_distance(a, b):
     return math.sqrt(math.pow(a.real - b.real, 2) + math.pow(a.imag - b.imag, 2))
 
-#offset 1 for no offset
+#fix infinite loop - don't allow segment length too small?
+#offset 0 for no offset
 def find_next_point(path, start_point, low, high, offset, seg_len, tolerance):
     mid_point = (low + high)/2 #how far along path to test
 
@@ -30,22 +30,21 @@ def find_next_point(path, start_point, low, high, offset, seg_len, tolerance):
             find_next_point(path, path.point(mid_point) + offset * path.normal(mid_point), mid_point, 1, offset, seg_len, tolerance) #find next point
     
     else: #binary search
-        if linear_dist > seg_len:
+        if linear_dist > seg_len and mid_point > 0.001:
             find_next_point(path, start_point, low, mid_point, offset, seg_len, tolerance) #try closer point
-        else:
-            if 1-mid_point > 0.01: #check if distance at end point is far enough
-                find_next_point(path, start_point, mid_point, high, offset, seg_len, tolerance) #try further point
+        elif 1-mid_point > 0.001:
+            find_next_point(path, start_point, mid_point, high, offset, seg_len, tolerance) #try further point
 
 
-#test offset
-points.append(p.point(0) + 0 * p.normal(0))
-find_next_point(p, p.point(0) + 0 * p.normal(0), 0, 1, 0, 5, 0.05)
-points.append(p.point(0) + -10 * p.normal(0))
-find_next_point(p, p.point(0) + -10 * p.normal(0), 0, 1, -10, 5, 0.05)
-points.append(p.point(0) + -20 * p.normal(0))
-find_next_point(p, p.point(0) + -20 * p.normal(0), 0, 1, -20, 5, 0.05)
-points.append(p.point(0) + -30 * p.normal(0))
-find_next_point(p, p.point(0) + -30 * p.normal(0), 0, 1, -30, 5, 0.05)
+#fills with concentric paths
+def fill_shape(path, num_layers, seg_len, tolerance):
+    for i in range(num_layers):
+        points.append(path.point(0) - seg_len*i * p.normal(0))
+        find_next_point(path, path.point(0) + -seg_len*i * p.normal(0), 0, 1, -seg_len*i, seg_len, tolerance)
+
+
+fill_shape(p, 13, 4, 0.05)
+
 disvg(p, nodes=points)
 print(points)
 
